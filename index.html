@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#7c5cff" />
+<title>医美记录本</title>
+<style>
+  :root{
+    --bg:#f7f7fb;
+    --card:#ffffff;
+    --text:#1f2330;
+    --muted:#7a8194;
+    --line:#ececf3;
+    --accent:#7c5cff;
+    --accent-soft:#efebff;
+    --danger:#ff4d6d;
+    --success:#1fbf6e;
+    --shadow:0 1px 2px rgba(20,20,40,.04), 0 6px 18px rgba(20,20,40,.06);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  header{
+    position:sticky;top:0;z-index:10;background:var(--bg);
+    padding:14px 16px 0;border-bottom:1px solid var(--line);
+  }
+  .title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  h1{font-size:18px;margin:0;font-weight:600;}
+  .actions{display:flex;gap:8px;}
+  .icon-btn{
+    border:1px solid var(--line);background:var(--card);border-radius:10px;
+    padding:6px 10px;font-size:13px;color:var(--muted);cursor:pointer;
+  }
+  .icon-btn:active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-soft);}
+
+  .tabs-wrap{
+    display:flex;align-items:center;gap:6px;
+  }
+  .tabs{
+    display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    padding:6px 0 10px;flex:1;scrollbar-width:none;
+  }
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{
+    flex:0 0 auto;padding:7px 14px;border-radius:999px;
+    background:var(--card);border:1px solid var(--line);color:var(--muted);
+    font-size:13px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;
+  }
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .tab-add{
+    flex:0 0 auto;width:34px;height:34px;border-radius:50%;
+    border:1px dashed var(--line);background:transparent;color:var(--muted);
+    font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .tab-add:active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);}
+  .tab .badge-mini{font-size:11px;opacity:.75;}
+
+  main{padding:14px 16px 96px;}
+  .empty{
+    text-align:center;color:var(--muted);padding:40px 20px;
+    background:var(--card);border-radius:14px;border:1px dashed var(--line);
+  }
+  .empty button{
+    margin-top:12px;background:var(--accent);color:#fff;border:none;padding:8px 18px;
+    border-radius:10px;font-size:14px;cursor:pointer;
+  }
+  .card{
+    background:var(--card);border-radius:14px;box-shadow:var(--shadow);
+    padding:14px;margin-bottom:12px;position:relative;
+  }
+  .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
+  .date{font-weight:600;font-size:15px;color:var(--text);}
+  .price-tag{
+    background:#fef3f3;color:#d63050;padding:3px 8px;border-radius:6px;
+    font-size:13px;font-weight:600;
+  }
+  .badge{
+    display:inline-block;background:var(--accent-soft);color:var(--accent);
+    padding:3px 8px;border-radius:6px;font-size:12px;font-weight:500;
+  }
+  .card-body{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;}
+  .card-body .k{color:var(--muted);}
+  .card-body .v{color:var(--text);word-break:break-word;}
+  .card-actions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;}
+  .mini-btn{
+    border:none;background:transparent;color:var(--muted);font-size:13px;
+    padding:4px 8px;border-radius:6px;cursor:pointer;
+  }
+  .mini-btn.edit:active{background:var(--accent-soft);color:var(--accent);}
+  .mini-btn.del:active{background:#ffe9ee;color:var(--danger);}
+
+  .fab{
+    position:fixed;right:18px;bottom:24px;z-index:20;
+    width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;
+    border:none;font-size:28px;box-shadow:0 8px 24px rgba(124,92,255,.45);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .fab:active{transform:scale(.96);}
+
+  /* modal */
+  .modal-mask{
+    position:fixed;inset:0;background:rgba(20,20,40,.45);z-index:30;
+    display:none;align-items:flex-end;justify-content:center;
+  }
+  .modal-mask.show{display:flex;}
+  .modal-mask.show.middle{align-items:center;}
+  .modal{
+    background:var(--bg);width:100%;max-width:520px;border-radius:18px 18px 0 0;
+    padding:16px 16px 28px;max-height:88vh;overflow-y:auto;animation:slideUp .25s ease;
+  }
+  .modal-mask.middle .modal{border-radius:18px;animation:pop .2s ease;}
+  @keyframes slideUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  @keyframes pop{from{transform:scale(.95);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .modal-head h2{margin:0;font-size:16px;font-weight:600;}
+  .close-btn{
+    background:transparent;border:none;font-size:22px;color:var(--muted);cursor:pointer;
+    width:32px;height:32px;border-radius:8px;
+  }
+  .close-btn:active{background:var(--line);}
+  .form-group{margin-bottom:12px;}
+  .form-group label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;}
+  .form-group input,.form-group select,.form-group textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+    background:var(--card);font-size:15px;color:var(--text);font-family:inherit;
+    outline:none;
+  }
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);}
+  .form-group textarea{resize:vertical;min-height:70px;}
+  .submit-btn{
+    width:100%;padding:12px;border:none;border-radius:12px;background:var(--accent);
+    color:#fff;font-size:15px;font-weight:500;cursor:pointer;margin-top:6px;
+  }
+  .submit-btn:active{opacity:.88;}
+  .submit-btn.danger{background:var(--danger);}
+  .submit-btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);}
+  .row{display:flex;gap:8px;}
+  .row > *{flex:1;}
+
+  /* category editor */
+  .cat-list{margin-bottom: 12px;}
+  .cat-row{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--card);padding:10px 12px;border-radius:10px;margin-bottom:6px;
+    border:1px solid var(--line);
+  }
+  .cat-row .name{font-weight:500;}
+  .cat-row .meta{font-size:12px;color:var(--muted);margin-top:2px;}
+  .cat-row-actions{display:flex;gap:4px;}
+
+  .field-editor{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:10px;margin-bottom:8px;
+  }
+  .field-editor .field-row{
+    display:flex;gap:6px;align-items:center;margin-bottom:6px;
+  }
+  .field-editor .field-row:last-child{margin-bottom:0;}
+  .field-editor input,.field-editor select{
+    padding:6px 8px;border:1px solid var(--line);border-radius:6px;
+    font-size:13px;background:#fff;color:var(--text);outline:none;
+  }
+  .field-editor input:focus,.field-editor select:focus{border-color:var(--accent);}
+  .field-editor .f-del{
+    background:transparent;border:none;color:var(--muted);cursor:pointer;
+    width:28px;height:28px;border-radius:6px;font-size:14px;
+  }
+  .field-editor .f-del:active{background:#ffe9ee;color:var(--danger);}
+  .add-field-btn{
+    background:transparent;border:1px dashed var(--line);color:var(--muted);
+    border-radius:8px;padding:8px;width:100%;cursor:pointer;font-size:13px;
+  }
+  .add-field-btn:active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);}
+
+  /* toast */
+  .toast{
+    position:fixed;left:50%;bottom:30%;transform:translateX(-50%);
+    background:rgba(20,20,40,.85);color:#fff;padding:8px 16px;border-radius:8px;
+    font-size:14px;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s;
+  }
+  .toast.show{opacity:1;}
+
+  .meta-line{font-size:12px;color:var(--muted);margin-bottom:10px;text-align:center;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-row">
+    <h1>医美记录本</h1>
+    <div class="actions">
+      <button class="icon-btn" id="btn-cats">分类</button>
+      <button class="icon-btn" id="btn-export">导出</button>
+      <button class="icon-btn" id="btn-import">导入</button>
+      <input type="file" id="file-import" accept="application/json" hidden />
+    </div>
+  </div>
+  <div class="tabs-wrap">
+    <div class="tabs" id="tabs"></div>
+    <button class="tab-add" id="tab-add" aria-label="新建分类">+</button>
+  </div>
+</header>
+
+<main>
+  <div class="meta-line" id="meta-line"></div>
+  <div id="list"></div>
+</main>
+
+<button class="fab" id="fab-add" aria-label="新增记录">+</button>
+
+<!-- 记录表单 -->
+<div class="modal-mask" id="modal-mask">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">新增记录</h2>
+      <button class="close-btn" id="btn-close">&times;</button>
+    </div>
+    <form id="form"></form>
+  </div>
+</div>
+
+<!-- 分类管理 -->
+<div class="modal-mask middle" id="cats-mask">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>分类管理</h2>
+      <button class="close-btn" id="cats-close">&times;</button>
+    </div>
+    <div class="cat-list" id="cat-list"></div>
+    <button class="submit-btn" id="btn-new-cat">+ 新建分类</button>
+  </div>
+</div>
+
+<!-- 分类编辑 -->
+<div class="modal-mask middle" id="cat-edit-mask">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="cat-edit-title">编辑分类</h2>
+      <button class="close-btn" id="cat-edit-close">&times;</button>
+    </div>
+    <form id="cat-form">
+      <div class="form-group">
+        <label>分类名</label>
+        <input type="text" name="label" placeholder="如 光子嫩肤 / 嗨体" />
+      </div>
+      <div class="form-group">
+        <label>字段</label>
+        <div id="field-editors"></div>
+        <button type="button" class="add-field-btn" id="btn-add-field">+ 添加字段</button>
+      </div>
+      <button type="submit" class="submit-btn">保存分类</button>
+      <button type="button" class="submit-btn danger" id="btn-delete-cat" style="margin-top:8px;display:none;">删除分类</button>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ 内置分类定义 ============
+const BUILTIN_CATEGORIES = [
+  {
+    id: 'botox', label: '肉毒', builtin: true,
+    fields: [
+      {key:'date', label:'日期', input:'date'},
+      {key:'brand', label:'品牌', input:'text', placeholder:'如 衡力 / 保妥适'},
+      {key:'dose', label:'剂量', input:'text', placeholder:'如 100 单位'},
+      {key:'area', label:'注射部位', input:'text', placeholder:'如 下颌缘+颈阔肌'},
+      {key:'price', label:'价格（元）', input:'number', placeholder:'如 1200'},
+      {key:'effect', label:'效果', input:'textarea', placeholder:'可选'},
+      {key:'duration', label:'维持时间', input:'text', placeholder:'如 4 个月'},
+      {key:'concurrent', label:'同期做了什么', input:'textarea', placeholder:'可选'},
+      {key:'sideEffect', label:'副作用/备注', input:'textarea', placeholder:'可选'},
+    ]
+  },
+  {
+    id: 'injection', label: '注射填充', builtin: true,
+    fields: [
+      {key:'date', label:'日期', input:'date'},
+      {key:'type', label:'品类', input:'select', options:['玻尿酸','童颜针','少女针','再生类','胶原蛋白','其他']},
+      {key:'brand', label:'品牌/型号', input:'text', placeholder:'如 乔雅登极致'},
+      {key:'dose', label:'剂量', input:'text', placeholder:'如 1ml × 2'},
+      {key:'area', label:'注射部位', input:'text', placeholder:'如 鼻基底 / 苹果肌'},
+      {key:'price', label:'价格（元）', input:'number', placeholder:'如 5800'},
+      {key:'effect', label:'效果', input:'textarea', placeholder:'可选'},
+      {key:'duration', label:'维持时间', input:'text', placeholder:'如 9 个月'},
+      {key:'sideEffect', label:'副作用/备注', input:'textarea', placeholder:'可选'},
+    ]
+  },
+  {
+    id: 'rface', label: '射频/抗衰', builtin: true,
+    fields: [
+      {key:'date', label:'日期', input:'date'},
+      {key:'device', label:'仪器/品牌', input:'text', placeholder:'如 热玛吉 FLX / 超声炮'},
+      {key:'area', label:'治疗部位', input:'text', placeholder:'如 全脸 / 下颌缘'},
+      {key:'energy', label:'能量/发数', input:'text', placeholder:'如 600 发'},
+      {key:'price', label:'价格（元）', input:'number', placeholder:'如 12000'},
+      {key:'effect', label:'效果', input:'textarea', placeholder:'可选'},
+      {key:'duration', label:'维持时间', input:'text', placeholder:'如 1 年'},
+      {key:'sideEffect', label:'副作用/备注', input:'textarea', placeholder:'可选'},
+    ]
+  },
+  {
+    id: 'skinbooster', label: '水光皮肤', builtin: true,
+    fields: [
+      {key:'date', label:'日期', input:'date'},
+      {key:'type', label:'品类', input:'select', options:['水光针','动能素','微针','三文鱼','嗨体','其他']},
+      {key:'brand', label:'品牌/型号', input:'text', placeholder:'如 菲洛嘉 135HA'},
+      {key:'spec', label:'规格/浓度', input:'text', placeholder:'如 5ml'},
+      {key:'method', label:'注射方式', input:'text', placeholder:'如 机打 / 手针 / 微针导入'},
+      {key:'area', label:'部位', input:'text', placeholder:'如 全脸'},
+      {key:'price', label:'价格（元）', input:'number', placeholder:'如 1800'},
+      {key:'effect', label:'效果', input:'textarea', placeholder:'可选'},
+      {key:'duration', label:'维持时间', input:'text', placeholder:'如 1 个月'},
+      {key:'sideEffect', label:'副作用/备注', input:'textarea', placeholder:'可选'},
+    ]
+  },
+  {
+    id: 'other', label: '其他', builtin: true,
+    fields: [
+      {key:'date', label:'日期', input:'date'},
+      {key:'item', label:'项目名', input:'text', placeholder:'如 刷酸 / 光子嫩肤'},
+      {key:'brand', label:'品牌/参数', input:'text', placeholder:'可选'},
+      {key:'area', label:'部位', input:'text', placeholder:'可选'},
+      {key:'price', label:'价格（元）', input:'number', placeholder:'可选'},
+      {key:'effect', label:'效果', input:'textarea', placeholder:'可选'},
+      {key:'sideEffect', label:'副作用/备注', input:'textarea', placeholder:'可选'},
+    ]
+  },
+];
+
+const STORAGE_KEY = 'aesthetic-records-v2';
+const STORAGE_KEY_LEGACY = 'aesthetic-records-v1';
+const RESERVED_KEYS = ['id','date','price']; // ← 价格一定不能少
+const FIELD_TYPES = [
+  {value:'text', label:'单行文字'},
+  {value:'textarea', label:'长文字'},
+  {value:'number', label:'数字'},
+  {value:'date', label:'日期'},
+  {value:'select', label:'下拉选择'},
+];
+
+let state = {
+  activeCategory: 'botox',
+  categories: BUILTIN_CATEGORIES.map(c => JSON.parse(JSON.stringify(c))),
+  records: {
+    botox:[], injection:[], rface:[], skinbooster:[], other:[]
+  },
+  editingId: null,
+  editingCategoryId: null,
+};
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data && data.categories) {
+        // 合并内置 + 用户自定义（内置以 BUILTIN_CATEGORIES 为权威）
+        const userCats = (data.categories || []).filter(c => !c.builtin);
+        const merged = BUILTIN_CATEGORIES.map(b => clone(b));
+        userCats.forEach(uc => merged.push(uc));
+        state.categories = merged;
+      }
+      if (data && data.records) state.records = Object.assign(state.records, data.records);
+      if (data && data.activeCategory && data.categories && data.categories.find(c => c.id === data.activeCategory)) {
+        state.activeCategory = data.activeCategory;
+      }
+    } else {
+      // 迁移 v1 -> v2
+      const old = localStorage.getItem(STORAGE_KEY_LEGACY);
+      if (old) {
+        const oldParsed = JSON.parse(old);
+        if (oldParsed && oldParsed.records) {
+          state.records = oldParsed.records;
+          toast('已迁移 v1 数据');
+        }
+      }
+    }
+  } catch(e) { console.warn(e); }
+}
+
+function persist() {
+  const userCats = state.categories.filter(c => !c.builtin);
+  const builtinCats = BUILTIN_CATEGORIES.map(b => {
+    // 用运行时版本（用户可能改了字段）
+    const live = state.categories.find(c => c.id === b.id);
+    return live || b;
+  });
+  const out = {
+    activeCategory: state.activeCategory,
+    categories: builtinCats.concat(userCats),
+    records: state.records,
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(out));
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fmtDate(s) {
+  if (!s) return '未填日期';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+}
+
+function fmtMoney(s) {
+  if (s === '' || s == null) return '';
+  const n = Number(s);
+  if (isNaN(n)) return String(s);
+  return '¥' + n.toLocaleString('zh-CN');
+}
+
+function getCategory() { return state.categories.find(c => c.id === state.activeCategory); }
+
+// ============ 渲染 ============
+function renderTabs() {
+  const el = document.getElementById('tabs');
+  el.innerHTML = state.categories.map(c => {
+    const count = (state.records[c.id] || []).length;
+    const badge = count ? `<span class="badge-mini">${count}</span>` : '';
+    return `<div class="tab ${c.id === state.activeCategory ? 'active' : ''}" data-id="${c.id}">${esc(c.label)}${badge}</div>`;
+  }).join('');
+  el.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      state.activeCategory = t.dataset.id;
+      persist();
+      renderTabs();
+      renderList();
+    });
+  });
+}
+
+function renderList() {
+  const list = document.getElementById('list');
+  const cat = getCategory();
+  if (!cat) { list.innerHTML = ''; return; }
+  const records = (state.records[cat.id] || []).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+  const totalAll = state.categories.reduce((s,c) => s + ((state.records[c.id]||[]).length), 0);
+  document.getElementById('meta-line').textContent =
+    totalAll ? `共 ${totalAll} 条记录 · 数据仅存于本设备` : '尚未记录任何项目';
+
+  if (!records.length) {
+    list.innerHTML = `<div class="empty">还没有 ${esc(cat.label)} 记录<br/><button id="empty-add">+ 新增第一条</button></div>`;
+    const btn = document.getElementById('empty-add');
+    if (btn) btn.addEventListener('click', () => openRecordModal(null));
+    return;
+  }
+
+  list.innerHTML = records.map(r => {
+    const body = cat.fields.filter(f => f.key !== 'date' && f.key !== 'price' && r[f.key])
+      .map(f => `<div class="k">${esc(f.label)}</div><div class="v">${esc(r[f.key])}</div>`).join('');
+    const priceHtml = r.price ? `<div class="price-tag">${esc(fmtMoney(r.price))}</div>` : '';
+    const brandOrType = r.brand || r.type || r.device || '';
+    const badgeHtml = brandOrType ? `<div class="badge">${esc(brandOrType)}</div>` : '';
+    return `
+      <div class="card" data-id="${r.id}">
+        <div class="card-head">
+          <div class="date">${fmtDate(r.date)}</div>
+          ${priceHtml}
+          ${badgeHtml}
+        </div>
+        <div class="card-body">${body}</div>
+        <div class="card-actions">
+          <button class="mini-btn edit" data-act="edit" data-id="${r.id}">编辑</button>
+          <button class="mini-btn del" data-act="del" data-id="${r.id}">删除</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  list.querySelectorAll('.mini-btn').forEach(b => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = b.dataset.id;
+      if (b.dataset.act === 'edit') openRecordModal(id);
+      else if (b.dataset.act === 'del') deleteRecord(id);
+    });
+  });
+}
+
+// ============ 记录 CRUD ============
+function openRecordModal(id) {
+  const cat = getCategory();
+  if (!cat) return;
+  state.editingId = id || null;
+  const record = id ? state.records[cat.id].find(r => r.id === id) : {};
+  document.getElementById('modal-title').textContent = id ? '编辑记录' : '新增记录';
+
+  const form = document.getElementById('form');
+  form.innerHTML = cat.fields.map(f => {
+    const v = record[f.key] || '';
+    const placeholder = f.placeholder ? `placeholder="${esc(f.placeholder)}"` : '';
+    let inputEl;
+    if (f.input === 'textarea') {
+      inputEl = `<textarea name="${f.key}" rows="2" ${placeholder}>${esc(v)}</textarea>`;
+    } else if (f.input === 'select') {
+      const opts = (f.options || []).map(o => `<option value="${esc(o)}" ${o===v?'selected':''}>${esc(o)}</option>`).join('');
+      inputEl = `<select name="${f.key}"><option value=""></option>${opts}</select>`;
+    } else {
+      inputEl = `<input type="${f.input}" name="${f.key}" value="${esc(v)}" ${placeholder} />`;
+    }
+    return `<div class="form-group"><label>${esc(f.label)}</label>${inputEl}</div>`;
+  }).join('') + `<button type="submit" class="submit-btn">保存</button>`;
+
+  document.getElementById('modal-mask').classList.add('show');
+}
+
+function closeRecordModal() {
+  document.getElementById('modal-mask').classList.remove('show');
+  state.editingId = null;
+}
+
+function saveRecord(e) {
+  e.preventDefault();
+  const cat = getCategory();
+  if (!cat) return;
+  const form = e.target;
+  const data = {};
+  cat.fields.forEach(f => {
+    data[f.key] = (form.elements[f.key].value || '').trim();
+  });
+
+  if (!data.date) { toast('请填写日期'); return; }
+
+  if (state.editingId) {
+    const arr = state.records[cat.id] || [];
+    const idx = arr.findIndex(r => r.id === state.editingId);
+    if (idx >= 0) arr[idx] = Object.assign({}, arr[idx], data);
+    toast('已保存');
+  } else {
+    data.id = uid();
+    if (!state.records[cat.id]) state.records[cat.id] = [];
+    state.records[cat.id].push(data);
+    toast('已添加');
+  }
+  persist();
+  closeRecordModal();
+  renderTabs();
+  renderList();
+}
+
+function deleteRecord(id) {
+  const cat = getCategory();
+  if (!cat) return;
+  const r = (state.records[cat.id] || []).find(x => x.id === id);
+  if (!r) return;
+  if (!confirm('删除这条记录？此操作不可撤销。')) return;
+  state.records[cat.id] = state.records[cat.id].filter(x => x.id !== id);
+  persist();
+  renderTabs();
+  renderList();
+  toast('已删除');
+}
+
+// ============ 分类管理 ============
+function openCatsModal() {
+  const list = document.getElementById('cat-list');
+  list.innerHTML = state.categories.map(c => {
+    const meta = c.builtin ? `内置 · ${c.fields.length} 字段` : `自定义 · ${c.fields.length} 字段`;
+    return `
+      <div class="cat-row">
+        <div>
+          <div class="name">${esc(c.label)}</div>
+          <div class="meta">${meta}</div>
+        </div>
+        <div class="cat-row-actions">
+          <button class="mini-btn edit" data-act="edit" data-id="${c.id}">编辑</button>
+          ${c.builtin ? '' : `<button class="mini-btn del" data-act="del" data-id="${c.id}">删除</button>`}
+        </div>
+      </div>`;
+  }).join('');
+  list.querySelectorAll('.mini-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      if (b.dataset.act === 'edit') openCatEditModal(b.dataset.id);
+      else if (b.dataset.act === 'del') deleteCategory(b.dataset.id);
+    });
+  });
+  document.getElementById('cats-mask').classList.add('show');
+}
+
+function closeCatsModal() { document.getElementById('cats-mask').classList.remove('show'); }
+
+let editingCatFields = [];
+let editingCatIsBuiltin = false;
+
+function openCatEditModal(id) {
+  const isNew = !id;
+  const cat = isNew ? {label:'', fields:[]} : state.categories.find(c => c.id === id);
+  if (!cat) return;
+
+  if (!isNew) {
+    state.editingCategoryId = id;
+    editingCatIsBuiltin = !!cat.builtin;
+  } else {
+    state.editingCategoryId = null;
+    editingCatIsBuiltin = false;
+  }
+  editingCatFields = clone(cat.fields);
+
+  document.getElementById('cat-edit-title').textContent = isNew ? '新建分类' : '编辑分类';
+  const delBtn = document.getElementById('btn-delete-cat');
+  delBtn.style.display = (isNew || cat.builtin) ? 'none' : 'block';
+
+  const form = document.getElementById('cat-form');
+  form.elements['label'].value = cat.label || '';
+  renderFieldEditors();
+  document.getElementById('cat-edit-mask').classList.add('show');
+}
+
+function closeCatEditModal() { document.getElementById('cat-edit-mask').classList.remove('show'); }
+
+function renderFieldEditors() {
+  const el = document.getElementById('field-editors');
+  el.innerHTML = editingCatFields.map((f, idx) => {
+    const isLocked = !f.custom && ['date'].includes(f.key);
+    const typeOptions = FIELD_TYPES.map(t =>
+      `<option value="${t.value}" ${t.value===f.input?'selected':''}>${t.label}</option>`).join('');
+    const optsField = f.input === 'select'
+      ? `<input type="text" data-idx="${idx}" data-prop="optionsStr" placeholder="选项1, 选项2, 选项3" value="${esc((f.options||[]).join(', '))}" style="flex:1;" />`
+      : `<input type="text" placeholder="（仅下拉选才需要）" disabled style="flex:1;opacity:.5;" />`;
+    return `
+      <div class="field-editor" data-idx="${idx}">
+        <div class="field-row">
+          <input type="text" data-idx="${idx}" data-prop="label" placeholder="显示名（如 品牌）" value="${esc(f.label||'')}" style="flex:2;" ${isLocked?'readonly':''} />
+          <button type="button" class="f-del" data-act="del" data-idx="${idx}" ${isLocked?'disabled style="opacity:.3"':''}>×</button>
+        </div>
+        <div class="field-row">
+          <select data-idx="${idx}" data-prop="input" ${isLocked?'disabled':''}>${typeOptions}</select>
+          <input type="text" data-idx="${idx}" data-prop="placeholder" placeholder="占位提示（可选）" value="${esc(f.placeholder||'')}" style="flex:2;" ${isLocked?'readonly':''} />
+        </div>
+        <div class="field-row">
+          ${optsField}
+        </div>
+      </div>`;
+  }).join('');
+  el.querySelectorAll('input,select').forEach(inp => {
+    inp.addEventListener('input', onFieldEditorChange);
+    inp.addEventListener('change', onFieldEditorChange);
+  });
+  el.querySelectorAll('.f-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = +btn.dataset.idx;
+      const f = editingCatFields[idx];
+      if (f && !f.custom && ['date'].includes(f.key)) { toast('日期字段不可删'); return; }
+      editingCatFields.splice(idx, 1);
+      renderFieldEditors();
+    });
+  });
+}
+
+function onFieldEditorChange(e) {
+  const inp = e.target;
+  const idx = +inp.dataset.idx;
+  const prop = inp.dataset.prop;
+  const f = editingCatFields[idx];
+  if (!f) return;
+  if (prop === 'optionsStr') {
+    f.options = inp.value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+  } else {
+    f[prop] = inp.value;
+  }
+  // 如果改了 input 类型，选项字段需要重新渲染
+  if (prop === 'input') renderFieldEditors();
+}
+
+function addField() {
+  editingCatFields.push({key: 'f_' + uid(), label: '新字段', input: 'text', custom: true});
+  renderFieldEditors();
+}
+
+function saveCategory(e) {
+  e.preventDefault();
+  const form = e.target;
+  const label = form.elements['label'].value.trim();
+  if (!label) { toast('请填写分类名'); return; }
+
+  // 校验：每个 field 都要有 label
+  for (const f of editingCatFields) {
+    if (!f.label || !f.label.trim()) { toast('所有字段都需要名称'); return; }
+    if (!f.key) f.key = 'f_' + uid();
+  }
+
+  if (state.editingCategoryId) {
+    const idx = state.categories.findIndex(c => c.id === state.editingCategoryId);
+    if (idx >= 0) {
+      state.categories[idx].label = label;
+      state.categories[idx].fields = editingCatFields;
+    }
+  } else {
+    const newId = 'user_' + uid();
+    state.categories.push({id:newId, label, custom:true, fields:editingCatFields});
+    state.records[newId] = [];
+    state.activeCategory = newId;
+  }
+  persist();
+  closeCatEditModal();
+  renderTabs();
+  renderList();
+  toast('已保存分类');
+}
+
+function deleteCategory(id) {
+  const cat = state.categories.find(c => c.id === id);
+  if (!cat || cat.builtin) return;
+  const count = (state.records[id] || []).length;
+  const msg = count
+    ? `「${cat.label}」下有 ${count} 条记录，删除后这些记录也会丢失。继续？`
+    : `确定删除「${cat.label}」？`;
+  if (!confirm(msg)) return;
+  state.categories = state.categories.filter(c => c.id !== id);
+  delete state.records[id];
+  if (state.activeCategory === id) state.activeCategory = state.categories[0].id;
+  persist();
+  openCatsModal(); // refresh
+  renderTabs();
+  renderList();
+  toast('分类已删除');
+}
+
+// ============ 导出 / 导入 ============
+function exportData() {
+  const blob = new Blob([JSON.stringify({
+    activeCategory: state.activeCategory,
+    categories: state.categories,
+    records: state.records
+  }, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `aesthetic-records-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('已导出 JSON');
+}
+
+function importData(file) {
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data && data.records && data.categories) {
+        state.categories = data.categories;
+        state.records = data.records;
+        if (data.activeCategory) state.activeCategory = data.activeCategory;
+        persist();
+        renderTabs();
+        renderList();
+        toast('已导入');
+      } else {
+        toast('文件格式不对');
+      }
+    } catch (err) { toast('解析失败'); }
+  };
+  r.readAsText(file);
+}
+
+// ============ utils ============
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+// ============ 事件绑定 ============
+document.getElementById('fab-add').addEventListener('click', () => openRecordModal(null));
+document.getElementById('btn-close').addEventListener('click', closeRecordModal);
+document.getElementById('modal-mask').addEventListener('click', e => {
+  if (e.target.id === 'modal-mask') closeRecordModal();
+});
+document.getElementById('form').addEventListener('submit', saveRecord);
+
+document.getElementById('btn-cats').addEventListener('click', openCatsModal);
+document.getElementById('cats-close').addEventListener('click', closeCatsModal);
+document.getElementById('cats-mask').addEventListener('click', e => {
+  if (e.target.id === 'cats-mask') closeCatsModal();
+});
+document.getElementById('btn-new-cat').addEventListener('click', () => openCatEditModal(null));
+
+document.getElementById('cat-edit-close').addEventListener('click', closeCatEditModal);
+document.getElementById('cat-edit-mask').addEventListener('click', e => {
+  if (e.target.id === 'cat-edit-mask') closeCatEditModal();
+});
+document.getElementById('cat-form').addEventListener('submit', saveCategory);
+document.getElementById('btn-add-field').addEventListener('click', addField);
+document.getElementById('btn-delete-cat').addEventListener('click', () => {
+  if (!state.editingCategoryId) return;
+  deleteCategory(state.editingCategoryId);
+  closeCatEditModal();
+});
+
+document.getElementById('tab-add').addEventListener('click', () => openCatEditModal(null));
+document.getElementById('btn-export').addEventListener('click', exportData);
+document.getElementById('btn-import').addEventListener('click', () => document.getElementById('file-import').click());
+document.getElementById('file-import').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) importData(f);
+  e.target.value = '';
+});
+
+// ============ 初始化 ============
+load();
+
+// 首次预填示例肉毒
+const totalAll0 = state.categories.reduce((s,c) => s + ((state.records[c.id]||[]).length), 0);
+if (totalAll0 === 0) {
+  state.records.botox = [
+    {id: uid(), date:'2025-11-15', brand:'国产（衡力）', dose:'100 单位', area:'下颌缘+颈阔肌', price:'', effect:'', concurrent:'', sideEffect:''},
+    {id: uid(), date:'2026-03-15', brand:'国产（衡力）', dose:'100 单位', area:'下颌缘+颈阔肌', price:'', effect:'', concurrent:'', sideEffect:''},
+    {id: uid(), date:'2026-05-15', brand:'国产（衡力）', dose:'约 100 单位', area:'英伦大提升（全脸+下颌缘）', price:'', effect:'', concurrent:'', sideEffect:'发际线是否拉高？'},
+    {id: uid(), date:'2026-07-15', brand:'保妥适（美国）', dose:'20 单位', area:'鼻翼缘两侧', price:'', effect:'', concurrent:'', sideEffect:''},
+    {id: uid(), date:'2026-08-15', brand:'国产（衡力）', dose:'100 单位', area:'下颌缘+颈阔肌', price:'', effect:'', concurrent:'', sideEffect:''},
+  ];
+  persist();
+}
+
+renderTabs();
+renderList();
+</script>
+
+</body>
+</html>
